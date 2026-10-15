@@ -3,9 +3,10 @@
 namespace App\Services\V1;
 
 use App\Exceptions\Auth\InvalidCredentials;
+use App\Exceptions\Auth\InvalidOtp;
+use App\Jobs\SendOtpEmail;
 use App\Mail\Auth\OtpMail;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -13,52 +14,63 @@ use Illuminate\Support\Facades\Mail;
 class AuthService
 {
     /**
-     * Service for user register
+     * Register a user and send an email verification OTP.
      */
-    public function userRegister(array $data)
+    public function userRegister(array $data): User
     {
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => $data['password'],
+            'password' => Hash::make($data['password']),
         ]);
 
-        $otp = random_int(100000, 999999);
+        $otp = (string) random_int(100000, 999999);
 
-        Mail::to($user->email)->send(new OtpMail($user));
+        $cacheKey = 'otp_' . $user->id;
+
+        Cache::put($cacheKey, $otp, now()->addMinutes(10));
+
+        SendOtpEmail::dispatch($user, $otp);
 
         return $user;
     }
 
     /**
-     * Service for user login
+     * Authenticate a user.
      */
-    public function userLogin(array $data)
+    public function userLogin(array $data): User
     {
         $user = User::where('email', $data['email'])->first();
 
-        if (!$user) {
+        if (
+            !$user ||
+            !Hash::check($data['password'], $user->password)
+        ) {
             throw new InvalidCredentials();
         }
-
-        if (!Hash::check($data['password'], $user->password)) {
-            throw new InvalidCredentials();
-        }
-
 
         return $user;
     }
 
     /**
-     * Service for email verification
+     * Verify the user's email using the OTP.
      */
-    public function verifyEmail(int $userCode, Request $request)
+    public function verifyEmail(string $userCode, User $user): void
     {
-        $cacheKey = 'otp_' . $request->user()->id;
+        $cacheKey = 'otp_' . $user->id;
         $code = Cache::get($cacheKey);
 
-        if ($code === $userCode) {
-            $request->user()->email_verified_at = now();
+        if (
+            !is_string($code) ||
+            !hash_equals($code, $userCode)
+        ) {
+            throw new InvalidOtp();
         }
+
+        $user->forceFill([
+            'email_verified_at' => now(),
+        ])->save();
+
+        Cache::forget($cacheKey);
     }
 }

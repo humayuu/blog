@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\V1\Auth\EmailVerificationRequest;
 use App\Http\Requests\V1\Auth\UserLoginRequest;
 use App\Http\Requests\V1\Auth\UserRegisterRequest;
 use App\Http\Resources\V1\UserResource;
 use App\Services\V1\AuthService;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 
 class AuthController extends Controller
@@ -22,9 +22,10 @@ class AuthController extends Controller
 
         // create token
         $token = $user->createToken('auth_token')->plainTextToken;
+
         return response()->json([
             'status' => true,
-            'message' => '',
+            'message' => 'User Created Successfully.Please verify your email first',
             'token_type' => 'bearer',
             'user' => new UserResource($user),
             'token' => $token,
@@ -71,5 +72,16 @@ class AuthController extends Controller
     }
 
     // Handle email verification
-    public function emailVerify(EmailVerificationRequest $request) {}
+    public function emailVerify(EmailVerificationRequest $request)
+    {
+        $this->authService->verifyEmail(
+            (string) $request->validated('otp'),
+            $request->user()
+        );
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Email Verified Successfully',
+        ], 200);
+    }
 }
