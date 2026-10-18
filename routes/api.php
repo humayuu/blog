@@ -13,11 +13,20 @@ Route::prefix('v1')
         Route::post('/login', 'login')
             ->middleware('throttle:5,1');
 
+        Route::post('/forgot-password', 'resetPasswordLink')
+            ->middleware('throttle:5,1');
+
+        Route::post('/reset-password', 'completePasswordReset')
+            ->middleware('throttle:5,1');
+
         Route::middleware('auth:sanctum')->group(function () {
 
             // Accessible before email verification
             Route::post('/verify', 'emailVerify')
                 ->middleware('throttle:5,1');
+
+            // Resend OTP
+            Route::post('/resend-otp', 'resendOtp')->middleware('throttle:5,1');
 
             Route::post('/logout', 'logout');
 
