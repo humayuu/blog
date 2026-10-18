@@ -4,11 +4,12 @@ namespace App\Jobs;
 
 use App\Mail\Auth\ResetPasswordLink;
 use App\Models\User;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
 
-class ResetPassword implements ShouldQueue
+class ResetPassword implements ShouldBeEncrypted, ShouldQueue
 {
     use Queueable;
 

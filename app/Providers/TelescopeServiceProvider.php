@@ -36,11 +36,18 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      */
     protected function hideSensitiveRequestDetails(): void
     {
+        // Secrets in request bodies are hidden in every environment.
+        Telescope::hideRequestParameters([
+            '_token',
+            'password',
+            'password_confirmation',
+            'otp',
+            'token',
+        ]);
+
         if ($this->app->environment('local')) {
             return;
         }
-
-        Telescope::hideRequestParameters(['_token']);
 
         Telescope::hideRequestHeaders([
             'cookie',

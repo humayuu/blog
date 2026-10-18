@@ -4,11 +4,12 @@ namespace App\Jobs;
 
 use App\Mail\Auth\OtpMail;
 use App\Models\User;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
 
-class SendOtpEmail implements ShouldQueue
+class SendOtpEmail implements ShouldBeEncrypted, ShouldQueue
 {
     use Queueable;
 

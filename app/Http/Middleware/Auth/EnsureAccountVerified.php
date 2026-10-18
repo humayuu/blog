@@ -15,12 +15,13 @@ class EnsureAccountVerified
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()->email_verified_at == null) {
+        if ($request->user()?->email_verified_at === null) {
             return response()->json([
                 'status' => false,
                 'message' => 'Please Verify your email first',
             ], 403);
         }
+
         return $next($request);
     }
 }

@@ -2,20 +2,25 @@
 
 namespace App\Services\V1;
 
+use App\Exceptions\Auth\AlreadyVerified;
 use App\Exceptions\Auth\InvalidCredentials;
 use App\Exceptions\Auth\InvalidOtp;
+use App\Exceptions\Auth\OtpResendTooSoon;
 use App\Jobs\ResetPassword;
 use App\Jobs\SendOtpEmail;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
-use App\Jobs\SendResetPasswordLink;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset as PasswordResetEvent;
 
 class AuthService
 {
+    private const OTP_MAX_ATTEMPTS = 5;
+
+    private const OTP_RESEND_COOLDOWN_SECONDS = 60;
+
     /**
      * Register a user and send an email verification OTP.
      */
@@ -27,13 +32,7 @@ class AuthService
             'password' => Hash::make($data['password']),
         ]);
 
-        $otp = (string) random_int(100000, 999999);
-
-        $cacheKey = 'otp_' . $user->id;
-
-        Cache::put($cacheKey, $otp, now()->addMinutes(10));
-
-        SendOtpEmail::dispatch($user, $otp);
+        $this->issueOtp($user);
 
         return $user;
     }
@@ -45,9 +44,13 @@ class AuthService
     {
         $user = User::where('email', $data['email'])->first();
 
+        // Always run a hash check so response time doesn't reveal
+        // whether the email is registered.
+        $hash = $user?->password ?? Hash::make(Str::random(16));
+
         if (
-            !$user ||
-            !Hash::check($data['password'], $user->password)
+            !Hash::check($data['password'], $hash) ||
+            !$user
         ) {
             throw new InvalidCredentials();
         }
@@ -61,12 +64,23 @@ class AuthService
     public function verifyEmail(string $userCode, User $user): void
     {
         $cacheKey = 'otp_' . $user->id;
+        $attemptsKey = 'otp_attempts_' . $user->id;
+
         $code = Cache::get($cacheKey);
+
+        // Too many wrong guesses: burn the OTP so it can't be brute-forced.
+        if ((int) Cache::get($attemptsKey, 0) >= self::OTP_MAX_ATTEMPTS) {
+            Cache::forget($cacheKey);
+            throw new InvalidOtp();
+        }
 
         if (
             !is_string($code) ||
-            !hash_equals($code, $userCode)
+            !hash_equals($code, $this->hashOtp($userCode))
         ) {
+            Cache::add($attemptsKey, 0, now()->addMinutes(10));
+            Cache::increment($attemptsKey);
+
             throw new InvalidOtp();
         }
 
@@ -75,26 +89,48 @@ class AuthService
         ])->save();
 
         Cache::forget($cacheKey);
+        Cache::forget($attemptsKey);
     }
 
     /**
      * Resend Otp
      */
-    public function resendOtpMail(User $user)
+    public function resendOtpMail(User $user): void
     {
-        $cacheKey = 'otp_' . $user->id;
-
-        if (Cache::has($cacheKey)) {
-            Cache::forget($cacheKey);
+        if ($user->email_verified_at !== null) {
+            throw new AlreadyVerified();
         }
 
+        // Cooldown stops resend from being used to reset the attempt counter.
+        if (!Cache::add(
+            'otp_resend_' . $user->id,
+            1,
+            now()->addSeconds(self::OTP_RESEND_COOLDOWN_SECONDS)
+        )) {
+            throw new OtpResendTooSoon();
+        }
+
+        $this->issueOtp($user);
+    }
+
+    private function hashOtp(string $otp): string
+    {
+        return hash_hmac('sha256', $otp, (string) config('app.key'));
+    }
+
+    /**
+     * Generate a fresh OTP, reset the attempt counter and email it.
+     */
+    private function issueOtp(User $user): void
+    {
         $otp = (string) random_int(100000, 999999);
 
-        Cache::put($cacheKey, $otp, now()->addMinutes(10));
+        // Only a keyed hash of the OTP is cached, never the plaintext.
+        Cache::put('otp_' . $user->id, $this->hashOtp($otp), now()->addMinutes(10));
+        Cache::forget('otp_attempts_' . $user->id);
 
         SendOtpEmail::dispatch($user, $otp);
     }
-
 
     public function sendPasswordResetLink(string $email): void
     {

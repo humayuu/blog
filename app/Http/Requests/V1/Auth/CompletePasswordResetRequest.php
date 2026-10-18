@@ -4,6 +4,7 @@ namespace App\Http\Requests\V1\Auth;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Password;
 
 class CompletePasswordResetRequest extends FormRequest
 {
@@ -15,6 +16,13 @@ class CompletePasswordResetRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->email)) {
+            $this->merge(['email' => strtolower(trim($this->email))]);
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -23,13 +31,14 @@ class CompletePasswordResetRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'email'],
+            'email' => ['required', 'email', 'max:255'],
             'token' => ['required', 'string'],
             'password' => [
                 'required',
                 'string',
-                'min:8',
+                'max:72',
                 'confirmed',
+                Password::min(8)->mixedCase()->numbers()->uncompromised(),
             ],
         ];
     }

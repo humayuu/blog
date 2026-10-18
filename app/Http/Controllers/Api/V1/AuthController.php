@@ -17,7 +17,6 @@ class AuthController extends Controller
 {
     public function __construct(protected AuthService $authService) {}
 
-
     // Handle user register
     public function register(UserRegisterRequest $request)
     {
@@ -59,7 +58,7 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Successfully logged out and token deleted.'
+            'message' => 'Successfully logged out and token deleted.',
         ], 200);
     }
 
@@ -88,7 +87,7 @@ class AuthController extends Controller
         ], 200);
     }
 
-    // Handle Resend Otp 
+    // Handle Resend Otp
     public function resendOtp(Request $request)
     {
         $this->authService->resendOtpMail($request->user());

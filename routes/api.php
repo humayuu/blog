@@ -11,7 +11,7 @@ Route::prefix('v1')
             ->middleware('throttle:5,1');
 
         Route::post('/login', 'login')
-            ->middleware('throttle:5,1');
+            ->middleware('throttle:login');
 
         Route::post('/forgot-password', 'resetPasswordLink')
             ->middleware('throttle:5,1');
