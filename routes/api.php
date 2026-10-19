@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\AuthController;
 use Illuminate\Support\Facades\Route;
 
+// Auth Routes
 Route::prefix('v1')
     ->controller(AuthController::class)
     ->group(function () {
@@ -35,3 +37,18 @@ Route::prefix('v1')
                 ->middleware('verified');
         });
     });
+
+// Admin Routes
+Route::prefix('v1')->group(function () {
+    Route::middleware('auth:sanctum')->group(function () {
+
+
+        Route::controller(UserController::class)->group(function () {
+            Route::get('/user', 'index');
+            Route::post('/user', 'store');
+            Route::get('/user/{id}', 'show');
+            Route::put('/user/{id}', 'update');
+            Route::delete('/user/{id}', 'delete');
+        });
+    });
+});
