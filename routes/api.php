@@ -49,6 +49,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/user/{id}', 'show');
             Route::put('/user/{id}', 'update');
             Route::delete('/user/{id}', 'delete');
+            Route::patch('/user/status/{id}', 'status');
         });
     });
 });
