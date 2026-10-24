@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\CategoryController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\AuthController;
 use Illuminate\Support\Facades\Route;
@@ -50,6 +51,15 @@ Route::prefix('v1')->group(function () {
             Route::put('/user/{id}', 'update');
             Route::delete('/user/{id}', 'delete');
             Route::patch('/user/status/{id}', 'status');
+        });
+
+        Route::controller(CategoryController::class)->group(function () {
+            Route::get('/category', 'index');
+            Route::post('/category', 'store');
+            Route::get('/category/{id}', 'show');
+            Route::put('/category/{id}', 'update');
+            Route::delete('/category/{id}', 'delete');
+            Route::patch('/category/status/{id}', 'status');
         });
     });
 });
