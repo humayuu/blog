@@ -4,6 +4,7 @@ namespace App\Services\V1;
 
 use App\Enums\CategoryStatus;
 use App\Models\Category;
+use Illuminate\Support\Str;
 
 class CategoryService
 {
@@ -18,8 +19,10 @@ class CategoryService
     // Create Category
     public function createCategory(array $data): Category
     {
+        $name = $data['name'];
         return Category::create([
-            'name' => $data['name'],
+            'name' => $name,
+            'slug' => Str::slug($name),
             'description' => $data['description'],
             'status' => $data['status'] ?? CategoryStatus::ACTIVE->value,
         ]);
@@ -30,11 +33,22 @@ class CategoryService
     {
         $category = Category::findOrFail($id);
 
-        $category->update([
-            'name' => $data['name'] ?? $category->name,
-            'description' => $data['description'] ?? $category->description,
-            'status' => $data['status'] ?? $category->status,
-        ]);
+        $updates = [];
+
+        if (array_key_exists('name', $data)) {
+            $updates['name'] = $data['name'];
+            $updates['slug'] = Str::slug($data['name']);
+        }
+
+        if (array_key_exists('description', $data)) {
+            $updates['description'] = $data['description'];
+        }
+
+        if (array_key_exists('status', $data)) {
+            $updates['status'] = $data['status'];
+        }
+
+        $category->update($updates);
 
         return $category->refresh();
     }

@@ -6,7 +6,7 @@ use App\Enums\CategoryStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable('name', 'description', 'status')]
+#[Fillable('name', 'slug', 'description', 'status')]
 class Category extends Model
 {
     protected function casts(): array
