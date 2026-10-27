@@ -27,7 +27,7 @@ class StorePostRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'short_description' => ['nullable', 'string'],
             'content' => ['required', 'string'],
-            'featured_image' => ['nullable', 'string', 'max:255'],
+            'featured_image' => ['required', 'mimes:png,jpg,jpeg', 'max:2048'],
             'is_published' => ['sometimes', 'boolean'],
             'published_at' => ['nullable', 'date'],
         ];
